@@ -1,0 +1,35 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.config import settings
+from app.routers.auth import router as auth_router
+from app.routers.signals import router as signals_router
+
+app = FastAPI(
+    title=settings.app_name,
+    version="1.0.0",
+    description="Trading signal generation, distribution, and analytics API",
+    docs_url="/docs",
+    redoc_url="/redoc",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(auth_router)
+app.include_router(signals_router)
+
+
+@app.get("/")
+async def root():
+    return {"message": f"Welcome to {settings.app_name}", "status": "running"}
+
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
