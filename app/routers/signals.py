@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, require_trader
 from app.core.telegram import send_signal_alert
+from app.core.websocket_manager import manager
 from app.database import get_db
 from app.models.signal import Signal
 from app.models.signal_history import SignalHistory
@@ -23,10 +24,8 @@ def calculate_rr(direction: str, entry: float, sl: float, tp: float):
     else:
         risk = sl - entry
         reward = entry - tp
-
     if risk <= 0:
         return None, None, None
-
     rr = round(reward / risk, 2)
     return rr, round(risk, 5), round(reward, 5)
 
@@ -43,7 +42,6 @@ async def create_signal(
         signal_data.stop_loss,
         signal_data.take_profit,
     )
-
     signal = Signal(
         **signal_data.model_dump(),
         created_by=current_user.id,
@@ -66,6 +64,22 @@ async def create_signal(
     await db.commit()
 
     await send_signal_alert(signal)
+    await manager.broadcast({
+        "type": "new_signal",
+        "signal": {
+            "id": str(signal.id),
+            "title": signal.title,
+            "symbol": signal.symbol,
+            "market": signal.market,
+            "direction": signal.direction,
+            "entry_price": signal.entry_price,
+            "stop_loss": signal.stop_loss,
+            "take_profit": signal.take_profit,
+            "risk_reward_ratio": signal.risk_reward_ratio,
+            "status": signal.status,
+            "source": signal.source,
+        }
+    })
     return signal
 
 
@@ -152,7 +166,6 @@ async def update_signal(
     signal = result.scalar_one_or_none()
     if not signal:
         raise HTTPException(status_code=404, detail="Signal not found")
-
     if signal.created_by != current_user.id and current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized to update this signal")
 
@@ -170,6 +183,12 @@ async def update_signal(
         )
         db.add(history)
         await send_signal_alert(signal)
+        await manager.broadcast({
+            "type": "signal_update",
+            "signal_id": str(signal.id),
+            "previous_status": previous_status,
+            "new_status": updates.status,
+        })
 
     await db.commit()
     await db.refresh(signal)
@@ -186,9 +205,7 @@ async def delete_signal(
     signal = result.scalar_one_or_none()
     if not signal:
         raise HTTPException(status_code=404, detail="Signal not found")
-
     if signal.created_by != current_user.id and current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Not authorized to delete this signal")
-
     await db.delete(signal)
     await db.commit()
