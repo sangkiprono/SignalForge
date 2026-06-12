@@ -4,6 +4,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.routers.auth import router as auth_router
 from app.routers.signals import router as signals_router
+from app.routers.webhooks import router as webhooks_router
+from app.routers.analytics import router as analytics_router
+from app.routers.api_keys import router as api_keys_router
+from app.routers.subscriptions import router as subscriptions_router
 
 app = FastAPI(
     title=settings.app_name,
@@ -23,6 +27,10 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(signals_router)
+app.include_router(webhooks_router)
+app.include_router(analytics_router)
+app.include_router(api_keys_router)
+app.include_router(subscriptions_router)
 
 
 @app.get("/")

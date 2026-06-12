@@ -19,7 +19,6 @@ class Signal(Base):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
-    # Market info
     symbol: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
     market: Mapped[str] = mapped_column(
         Enum("forex", "crypto", "stocks", "indices", "commodities", name="market_type"),
@@ -29,13 +28,11 @@ class Signal(Base):
         Enum("buy", "sell", name="signal_direction"), nullable=False
     )
 
-    # Price levels
     entry_price: Mapped[float] = mapped_column(Float, nullable=False)
     stop_loss: Mapped[float] = mapped_column(Float, nullable=False)
     take_profit: Mapped[float] = mapped_column(Float, nullable=False)
     current_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
-    # Status
     status: Mapped[str] = mapped_column(
         Enum("open", "tp_hit", "sl_hit", "expired", "cancelled", name="signal_status"),
         default="open",
@@ -43,25 +40,21 @@ class Signal(Base):
         index=True,
     )
 
-    # Source
     source: Mapped[str] = mapped_column(
         Enum("manual", "tradingview", "strategy", "broker", name="signal_source"),
         default="manual",
         nullable=False,
     )
 
-    # Risk management
     risk_reward_ratio: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     pips_risk: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     pips_reward: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
-    # Relationships
-    created_by: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    created_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
-    creator: Mapped["User"] = relationship("User", backref="signals")
+    creator: Mapped[Optional["User"]] = relationship("User", backref="signals")
 
-    # Timestamps
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
