@@ -9,6 +9,7 @@ from app.routers.analytics import router as analytics_router
 from app.routers.api_keys import router as api_keys_router
 from app.routers.subscriptions import router as subscriptions_router
 from app.routers.websocket import router as websocket_router
+from app.routers.admin import router as admin_router
 
 app = FastAPI(
     title=settings.app_name,
@@ -33,6 +34,7 @@ app.include_router(analytics_router)
 app.include_router(api_keys_router)
 app.include_router(subscriptions_router)
 app.include_router(websocket_router)
+app.include_router(admin_router)
 
 
 @app.get("/")
