@@ -8,9 +8,6 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     app_name: str = "SignalForge API"
     debug: bool = True
-    webhook_secret: str = "change-this-secret"
-    telegram_bot_token: str = ""
-    telegram_chat_id: str = ""
 
     class Config:
         env_file = ".env"
