@@ -2,12 +2,13 @@ import uuid
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, require_trader
 from app.core.telegram import send_signal_alert
 from app.core.websocket_manager import manager
+from app.core.scoring import score_signal
 from app.database import get_db
 from app.models.signal import Signal
 from app.models.signal_history import SignalHistory
@@ -30,6 +31,19 @@ def calculate_rr(direction: str, entry: float, sl: float, tp: float):
     return rr, round(risk, 5), round(reward, 5)
 
 
+async def get_symbol_win_rate(db: AsyncSession, symbol: str) -> float:
+    tp = await db.execute(
+        select(func.count(Signal.id)).where(Signal.symbol == symbol, Signal.status == "tp_hit")
+    )
+    sl = await db.execute(
+        select(func.count(Signal.id)).where(Signal.symbol == symbol, Signal.status == "sl_hit")
+    )
+    tp_count = tp.scalar()
+    sl_count = sl.scalar()
+    closed = tp_count + sl_count
+    return tp_count / closed if closed > 0 else 0.5
+
+
 @router.post("/", response_model=SignalResponse, status_code=status.HTTP_201_CREATED)
 async def create_signal(
     signal_data: SignalCreate,
@@ -42,12 +56,29 @@ async def create_signal(
         signal_data.stop_loss,
         signal_data.take_profit,
     )
+
+    win_rate = await get_symbol_win_rate(db, signal_data.symbol.upper())
+
+    from datetime import datetime, timezone
+    ai_score, ai_grade = score_signal(
+        direction=signal_data.direction,
+        entry_price=signal_data.entry_price,
+        stop_loss=signal_data.stop_loss,
+        take_profit=signal_data.take_profit,
+        market=signal_data.market,
+        source=signal_data.source,
+        created_at=datetime.now(timezone.utc),
+        symbol_win_rate=win_rate,
+    )
+
     signal = Signal(
         **signal_data.model_dump(),
         created_by=current_user.id,
         risk_reward_ratio=rr,
         pips_risk=pips_risk,
         pips_reward=pips_reward,
+        ai_score=ai_score,
+        ai_grade=ai_grade,
     )
     db.add(signal)
     await db.commit()
@@ -57,7 +88,7 @@ async def create_signal(
         signal_id=signal.id,
         previous_status=None,
         new_status="open",
-        notes="Signal created",
+        notes=f"Signal created | AI Score: {ai_score} ({ai_grade})",
         changed_by=current_user.id,
     )
     db.add(history)
@@ -78,6 +109,8 @@ async def create_signal(
             "risk_reward_ratio": signal.risk_reward_ratio,
             "status": signal.status,
             "source": signal.source,
+            "ai_score": signal.ai_score,
+            "ai_grade": signal.ai_grade,
         }
     })
     return signal

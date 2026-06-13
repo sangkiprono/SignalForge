@@ -73,6 +73,8 @@ class SignalResponse(BaseModel):
     risk_reward_ratio: Optional[float] = None
     pips_risk: Optional[float] = None
     pips_reward: Optional[float] = None
+    ai_score: Optional[int] = None
+    ai_grade: Optional[str] = None
     created_by: Optional[uuid.UUID] = None
     created_at: datetime
     updated_at: datetime
