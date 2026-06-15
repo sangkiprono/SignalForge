@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     webhook_secret: str = "change-this-secret"
     telegram_bot_token: str = ""
     telegram_chat_id: str = ""
+    metaapi_token: str = ""
+    metaapi_account_id: str = ""
 
     class Config:
         env_file = ".env"
