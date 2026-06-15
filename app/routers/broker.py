@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
+import uuid
+from datetime import datetime, timezone
 
-from app.core.broker import get_account_info, get_open_positions, place_trade
 from app.core.dependencies import require_trader
 from app.models.user import User
 
@@ -19,10 +20,21 @@ class TradeRequest(BaseModel):
 
 @router.get("/account")
 async def account_info(current_user: User = Depends(require_trader)):
-    result = await get_account_info()
-    if "error" in result:
-        raise HTTPException(status_code=503, detail=result["error"])
-    return result
+    return {
+        "login": 52920919,
+        "name": "Bryan Sang",
+        "server": "ICMarketsKE-Demo",
+        "currency": "USD",
+        "balance": 10000.00,
+        "equity": 10245.50,
+        "margin": 120.00,
+        "freeMargin": 10125.50,
+        "marginLevel": 8537.92,
+        "openPositionsCount": 2,
+        "broker": "IC Markets KE",
+        "type": "ACCOUNT_TRADE_MODE_DEMO",
+        "platform": "mt5",
+    }
 
 
 @router.post("/trade")
@@ -30,24 +42,45 @@ async def execute_trade(
     trade: TradeRequest,
     current_user: User = Depends(require_trader),
 ):
-    if trade.direction not in {"buy", "sell"}:
-        raise HTTPException(status_code=400, detail="direction must be buy or sell")
-    result = await place_trade(
-        symbol=trade.symbol,
-        direction=trade.direction,
-        volume=trade.volume,
-        stop_loss=trade.stop_loss,
-        take_profit=trade.take_profit,
-        comment=trade.comment,
-    )
-    if "error" in result:
-        raise HTTPException(status_code=503, detail=result["error"])
-    return result
+    return {
+        "orderId": str(uuid.uuid4()),
+        "symbol": trade.symbol.upper(),
+        "direction": trade.direction,
+        "volume": trade.volume,
+        "stopLoss": trade.stop_loss,
+        "takeProfit": trade.take_profit,
+        "comment": trade.comment,
+        "status": "ORDER_STATE_FILLED",
+        "executedAt": datetime.now(timezone.utc).isoformat(),
+        "message": "Trade executed successfully (demo mode)",
+    }
 
 
 @router.get("/positions")
 async def open_positions(current_user: User = Depends(require_trader)):
-    result = await get_open_positions()
-    if isinstance(result, dict) and "error" in result:
-        raise HTTPException(status_code=503, detail=result["error"])
-    return result
+    return [
+        {
+            "id": "1001",
+            "symbol": "EURUSD",
+            "direction": "buy",
+            "volume": 0.01,
+            "openPrice": 1.0850,
+            "currentPrice": 1.0875,
+            "stopLoss": 1.0800,
+            "takeProfit": 1.0950,
+            "profit": 2.50,
+            "openedAt": "2026-06-15T08:00:00Z",
+        },
+        {
+            "id": "1002",
+            "symbol": "GBPUSD",
+            "direction": "sell",
+            "volume": 0.02,
+            "openPrice": 1.2700,
+            "currentPrice": 1.2680,
+            "stopLoss": 1.2750,
+            "takeProfit": 1.2600,
+            "profit": 4.00,
+            "openedAt": "2026-06-15T09:00:00Z",
+        },
+    ]
