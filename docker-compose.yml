@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Sang45#Net
+      POSTGRES_DB: signalforge
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:Sang45#Net@db:5432/signalforge
+      - SECRET_KEY=your-super-secret-key-change-this-in-production
+      - ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+      - APP_NAME=SignalForge API
+      - DEBUG=False
+      - WEBHOOK_SECRET=signalforge-webhook-secret-2024
+      - TELEGRAM_BOT_TOKEN=8800003227:AAFH7vMDfxb3oWqgj-__8vZjIXRSIAQDV-I
+      - TELEGRAM_CHAT_ID=8745387481
+      - METAAPI_TOKEN=your-metaapi-token
+      - METAAPI_ACCOUNT_ID=e49bc98b-7170-4d21-b567-f2c279d82604
+    depends_on:
+      - db
+      - redis
+
+volumes:
+  postgres_data:
