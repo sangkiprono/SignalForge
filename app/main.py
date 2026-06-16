@@ -11,6 +11,7 @@ from app.routers.subscriptions import router as subscriptions_router
 from app.routers.websocket import router as websocket_router
 from app.routers.admin import router as admin_router
 from app.routers.broker import router as broker_router
+from app.routers.markets import router as markets_router
 
 app = FastAPI(
     title=settings.app_name,
@@ -37,6 +38,7 @@ app.include_router(subscriptions_router)
 app.include_router(websocket_router)
 app.include_router(admin_router)
 app.include_router(broker_router)
+app.include_router(markets_router)
 
 
 @app.get("/")
